@@ -161,6 +161,14 @@ class Instance extends Component
 				$newApp = new \yii\web\Application($config);
 			}
 
+			// The secondary app's constructor registered its error handler over the
+			// primary's (set_error_handler/set_exception_handler are global), so an
+			// exception later in the request would be rendered with the secondary
+			// app's error routes and components. Put the primary's handlers back.
+			if (method_exists($newApp->getErrorHandler(), 'unregister')) {
+				$newApp->getErrorHandler()->unregister();
+			}
+
 			static::preserveCurrentApp();
 
 			return $newApp;
