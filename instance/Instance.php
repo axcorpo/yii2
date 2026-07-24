@@ -29,6 +29,14 @@ class Instance extends Component
 	 */
 	protected $stack = [];
 
+	/**
+	 * @var bool Whether a secondary application is currently being constructed.
+	 * Bootstrap components can consult this to skip request-scoped side effects
+	 * (session access, user-activity writes) that only make sense in the primary
+	 * application actually handling the request.
+	 */
+	public static $creatingSecondaryApp = false;
+
 
 	/**
 	 * @inheritdoc
@@ -67,10 +75,41 @@ class Instance extends Component
 	/**
 	 * Gets the instance of an application.
 	 *
+	 * Constructing a secondary application has two side effects on the currently
+	 * running application that must be undone:
+	 *  - its `log` component's Dispatcher::init() points the global
+	 *    `Yii::getLogger()->dispatcher` at the secondary app, so the final log
+	 *    flush of the request (file logs, the yii2-debug data export) lands in
+	 *    the secondary app's targets and runtime path instead of the primary's;
+	 *  - dev-only modules (`debug`, `gii`) bootstrap themselves in the secondary
+	 *    app although it never handles a request; yii2-debug's UserPanel also
+	 *    touches the session for logged-in users ("Session is already started").
+	 * The logger dispatcher is therefore restored after construction and the
+	 * `debug`/`gii` modules are stripped from the secondary app's config.
+	 *
 	 * @param string $path Could be a valid alias or an absolute path to the application.
 	 * @return \yii\base\Application|null The application instance or null if errors occured.
 	 */
 	protected function getAppInstance($path)
+	{
+		$logger = Yii::getLogger();
+		$dispatcher = $logger->dispatcher;
+		static::$creatingSecondaryApp = true;
+		try {
+			return $this->createAppInstance($path);
+		} finally {
+			static::$creatingSecondaryApp = false;
+			$logger->dispatcher = $dispatcher;
+		}
+	}
+
+	/**
+	 * Builds the config and constructs the application instance.
+	 *
+	 * @param string $path Could be a valid alias or an absolute path to the application.
+	 * @return \yii\base\Application|null The application instance or null if errors occured.
+	 */
+	protected function createAppInstance($path)
 	{
 		try {
 			$path = Yii::getAlias($path);
@@ -99,6 +138,14 @@ class Instance extends Component
 				"@common" => "{$rootPath}/common",
 				$appAlias => $path,
 			];
+
+			// Dev-only modules serve the app handling the request, not secondary instances
+			unset($config['modules']['debug'], $config['modules']['gii']);
+			if (isset($config['bootstrap']) && is_array($config['bootstrap'])) {
+				$config['bootstrap'] = array_values(array_filter($config['bootstrap'], function ($component) {
+					return !in_array($component, ['debug', 'gii'], true);
+				}));
+			}
 
 			if ($appAlias === '@console') {
 				$newApp = new \yii\console\Application($config);
