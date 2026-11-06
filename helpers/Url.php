@@ -161,6 +161,11 @@ class Url extends \yii\helpers\Url
 			return $app;
 		}
 
+		// No app requested (e.g. "@uploads/..." urls): nothing to resolve
+		if (empty($app)) {
+			return null;
+		}
+
 		// Return the current app instance if the alias matches the current app basePath
 		if (\yii\helpers\FileHelper::normalizePath(Yii::getAlias($app)) == Yii::$app->basePath) {
 			return Yii::$app;

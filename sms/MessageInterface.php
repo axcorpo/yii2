@@ -85,7 +85,7 @@ interface MessageInterface
 	 * If null, the "sms" application component will be used instead.
 	 * @return bool whether this message is sent successfully.
 	 */
-	public function send(SmsInterface $sms = null);
+	public function send(?SmsInterface $sms = null);
 
 	/**
 	 * Returns string representation of this message.

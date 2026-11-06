@@ -46,7 +46,7 @@ class Settings extends Component
 	 */
 	public function getCategory($category)
 	{
-		return $this->data[$category];
+		return $this->data[$category] ?? [];
 	}
 
 	/**
@@ -74,7 +74,7 @@ class Settings extends Component
 	 */
 	public function getItemFromCategory($item, $category)
 	{
-		return $this->data[$category][$item];
+		return $this->data[$category][$item] ?? null;
 	}
 
 	/**

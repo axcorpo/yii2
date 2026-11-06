@@ -32,7 +32,7 @@ abstract class BaseMessage extends BaseObject implements MessageInterface
 	 * the "sms" application component will be used instead.
 	 * @return bool whether this message is sent successfully.
 	 */
-	public function send(SmsInterface $sms = null)
+	public function send(?SmsInterface $sms = null)
 	{
 		if ($sms === null && $this->sms === null) {
 			$sms = Yii::$app->getSms();
